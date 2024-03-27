@@ -1,0 +1,11 @@
+git clone https://github.com/zhangrengang/SubPhaser.git
+cd SubPhaser
+conda env create -f SubPhaser.yaml
+
+conda activate SubPhaser
+python setup.py install
+
+conda activate SubPhaser
+nohup subphaser -i genome.fa -c gph_ABCD.config  -min_fold 1  -o ABCD &
+
+

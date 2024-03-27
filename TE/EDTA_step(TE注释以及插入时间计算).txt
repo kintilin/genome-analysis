@@ -1,0 +1,52 @@
+#可以参考我的博客——TE(LTR)插入时间计算：https://blog.csdn.net/weixin_52269481/article/details/131738894
+git config --global --unset http.proxy
+git config --global --unset https.proxy
+git pull --depth 1
+git config --global http.postBuffer 524288000
+git clone https://github.com/oushujun/EDTA.git
+
+cd EDTA
+conda env create -f EDTA.yml
+conda activate EDTA
+nohup perl EDTA/EDTA.pl --genome genome.fa -species others -cds evm_cds.fa  -step all -t 20 -anno 1 &
+
+
+awk '$3 == "long_terminal_repeat"{print $0}' genome.fa.mod.LTR.intact.gff3 > ../5-3LTR.gff
+grep lLTR 5-3LTR.gff >  lLTR.gff
+grep rLTR 5-3LTR.gff >  rLTR.gff
+
+python LTR-sequences.py
+for ((i=0;i<16038;i+=2)); do head -n $i lLTR.fa |tail -n 2 >ltr/ltr$i.fa;head -n $i rLTR.fa |tail -n 2 >>ltr/ltr$i.fa; done
+
+在个人电脑中打开MEGA，点击右下角PROTOTYPE，进入模拟模式，选择序列类型（我使用Nucleotide non-coding）ALIGN——MUSCLE，使用默认参数点击确定生成比对配置文件.mao。
+前往MAGA官网下载Linux版MAGA：http://www.megasoftware.net/megaccusage.php 并上传至服务器
+#解压：
+tar -zxvf megacc_11.0.13_amd64.tar.gz
+#生成文件列表：
+ls ltr/*fa   >filelist.txt
+#循环运行mega
+for i in `cat filelist.txt` ;do megacc -a muscle_align_nucleotide.mao -d $i -o output/ ;done
+
+ls output/*.meg  > megfilelist.txt
+
+完成后进入MEGA模拟模式，选择序列类型——DISTANCE，使用以下参数生成计算遗传距离配置文件：distance_estimation_pairwise_nucleotide.mao
+Scope ：Pairs of taxa ；Variance Estimation Method ：None ；Substitutions Type ：Nucleotide ；Model/Method ：Kimura 2-parameter model ；Substitutions to Included：d Transitions Transversions ;Rates among Sites ： Gamma Distributed(G) ；Gamma Parameter ：1.00 ；Pattern among Lineages ： Same (Homogeneous) ；Gaps/Missing Data Treatment：Complete deletion
+#循环计算K值
+for i in `cat megfilelist.txt` ;do megacc -a distance_estimation_pairwise_nucleotide.mao -d $i -o outputa2/ ;done
+
+#conda activate py3.8
+python tecalculate.py
+
+
+
+
+#####TE PCA#####
+cd genome.fa.mod.EDTA.final
+mkdir tePCA
+cd tePCA
+grep ">" ../genome.fa.mod.EDTA.TElib.fa |awk -F'[>#_]' '{print $2"_"$3}' >total_TEfamily.list
+grep -v "CTG_" ../genome.fa.mod.EDTA.intact.gff3 |awk '{print $1}' |sort -u >chr.list
+#for i in `cat chr.list` ;do for j in `cat total_TEfamily.list` ;do grep $i ../genome.fa.mod.EDTA.intact.gff3|grep $j|wc -l >> $i.txt ;done ;done
+Rscript TEfamily.R
+
+

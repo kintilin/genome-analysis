@@ -1,0 +1,32 @@
+########
+wget https://codeload.github.com/wyp1125/MCScanX/zip/refs/heads/master
+unzip master 
+cd MCScanX-master # master解压出来文件名是MCScanX-master
+
+#在以下三个文件内输入#include <unistd.h>
+vim msa.h
+vim dissect_multiple_alignment.h
+vim detect_collinear_tandem_arrays.h
+
+make
+
+echo 'PATH=$PATH:/home/huxg/hxg_test/populations/collinearity/MCScanX-master/ ' >> ~/.bashrc
+source ~/.bashrc
+MCScanX
+
+
+
+########
+makeblastdb -dbtype nucl -in evm_cds.fa -input_type fasta -parse_seqids  -out GPH.blastndb
+nohup blastn  -query evm_cds.fa -db GPH.blastndb -out GPH.blastn -evalue 1e-10 -num_threads 10 -outfmt 6 -num_alignments 5 & #需要注意的是，这里不能用全基因组序列，而需要用基因序列或是CDS序列
+grep -v "CTG" GPH.blastn > ../GPH_noCTG.blast #blast文件和gff应位于同一文件夹
+sed -i 's/cds.//g' GPH_noCTG.blast 
+
+awk -F '[\t;]' '{if($3=="mRNA")print $1"\t"$9"\t"$4"\t"$5}' blast/evm.gff3 | sed 's/ID=//g' > evm.gene.gff3.gff #注意blast和gff文件中基因名是否一致(特别主要前缀或尾缀)，尤其注意，该gff需要比对的两个物种前后连在一起。。。。
+grep -v "CTG" evm.gene.gff3.gff > GPH_noCTG.gff
+
+MCScanX GPH_noCTG #注意blast文件和gff需要有相同的文件名，且后缀必须为blast、gff 
+
+
+
+
